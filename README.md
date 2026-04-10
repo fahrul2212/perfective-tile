@@ -1,24 +1,38 @@
-# ST-RoomNet: Learning Room Layout Estimation From Single Image Through Unsupervised Spatial Transformations
+# ST-RoomNet: Advanced Layout & Perspective Estimation
 
-This is the official implementation of ST-RoomNet: https://openaccess.thecvf.com/content/CVPR2023W/VOCVALC/html/Ibrahem_ST-RoomNet_Learning_Room_Layout_Estimation_From_Single_Image_Through_Unsupervised_CVPRW_2023_paper.html
+This project serves as a design and development framework for **Layout Estimation** and **Perspective Estimation**. It is a specialized development project derived and expanded from the original implementation.
 
-The spatial transformer module is based on this repo: https://github.com/dantkz/spatial-transformer-tensorflow
+Currently, it focuses on:
+- **Layout Estimation**: Redefining room geometry from single images.
+- **Perspective Estimation**: Refining spatial orientation and projective transformations.
 
-We modified the spatial transformer module to work in Tensorflow2.x and added more features such as nearest neighbor interpolation in addition to the original bilinear and bicubic interpolations.
+This is based on the official implementation of ST-RoomNet: [Paper Link](https://openaccess.thecvf.com/content/CVPR2023W/VOCVALC/html/Ibrahem_ST-RoomNet_Learning_Room_Layout_Estimation_From_Single_Image_Through_Unsupervised_CVPRW_2023_paper.html)
 
-requirements:
+The spatial transformer module is based on: [dantkz/spatial-transformer-tensorflow](https://github.com/dantkz/spatial-transformer-tensorflow)
 
-opencv 4.4.1
+## Key Enhancements
+- Migrated for **TensorFlow 2.x** compatibility.
+- Added advanced interpolation features (Nearest Neighbor, Bilinear, and Bicubic).
+- Integrated **Git LFS** for handling large model weights efficiently.
 
-tensorflow 2.9.1
+## Prerequisites & Requirements
+- **Git LFS**: Required to download model weights (`.h5` files). Run `git lfs pull` after cloning.
+- **Python Packages**:
+  - `opencv-python` (4.4.1+)
+  - `tensorflow` (2.9.1+)
+  - `tensorflow-addons`
+  - `numpy`, `matplotlib`, `scipy`, `scikit-learn`
 
-If you use this code, please cite the paper as follows:
+## Citation
+If you use this code in your research, please cite the original paper:
 
-@InProceedings{Ibrahem_2023_CVPR,<br>
-    author    = {Ibrahem, Hatem and Salem, Ahmed and Kang, Hyun-Soo},<br>
-    title     = {ST-RoomNet: Learning Room Layout Estimation From Single Image Through Unsupervised Spatial Transformations},<br>
-    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshops},<br>
-    month     = {June},<br>
-    year      = {2023},<br>
-    pages     = {3375-3383}<br>
+```bibtex
+@InProceedings{Ibrahem_2023_CVPR,
+    author    = {Ibrahem, Hatem and Salem, Ahmed and Kang, Hyun-Soo},
+    title     = {ST-RoomNet: Learning Room Layout Estimation From Single Image Through Unsupervised Spatial Transformations},
+    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshops},
+    month     = {June},
+    year      = {2023},
+    pages     = {3375-3383}
 }
+```
