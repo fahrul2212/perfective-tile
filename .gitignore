@@ -1,0 +1,22 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.env
+
+# Project specific outputs
+api_outputs/
+input_torch/
+input/
+
+# Weights (optional, usually ignored if using LFS, but safe here)
+*.h5
+*.npy
+*.npz
+
+# IDEs
+.vscode/
+.idea/
