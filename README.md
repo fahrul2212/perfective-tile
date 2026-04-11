@@ -1,38 +1,80 @@
-# ST-RoomNet: Advanced Layout & Perspective Estimation
+# ST-RoomNet Optimized by Fahrul Rozi
 
-This project serves as a design and development framework for **Layout Estimation** and **Perspective Estimation**. It is a specialized development project derived and expanded from the original implementation.
+Proyek ini adalah pengembangan dan optimasi dari **ST-RoomNet** yang dikembangkan oleh **Fahrul Rozi**. Versi ini telah mengalami perubahan signifikan dari implementasi aslinya untuk mencapai performa tinggi dan kualitas visual yang lebih baik.
 
-Currently, it focuses on:
-- **Layout Estimation**: Redefining room geometry from single images.
-- **Perspective Estimation**: Refining spatial orientation and projective transformations.
+## Fitur Utama
+- **High Performance**: Pipeline preprocessing penuh di GPU menggunakan PyTorch.
+- **Clean Predictions**: Filter *Largest Connected Component* untuk menghapus noise di tepi gambar.
+- **Smooth Edges**: *Soft probability mask* untuk hasil seleksi lantai yang anti-alias dan mulus.
+- **FastAPI Backend**: Endpoint yang siap digunakan untuk integrasi sistem.
+- **Clean Architecture**: Struktur pemfolderan yang rapi dan mudah di-maintain.
 
-This is based on the official implementation of ST-RoomNet: [Paper Link](https://openaccess.thecvf.com/content/CVPR2023W/VOCVALC/html/Ibrahem_ST-RoomNet_Learning_Room_Layout_Estimation_From_Single_Image_Through_Unsupervised_CVPRW_2023_paper.html)
-
-The spatial transformer module is based on: [dantkz/spatial-transformer-tensorflow](https://github.com/dantkz/spatial-transformer-tensorflow)
-
-## Key Enhancements
-- Migrated for **TensorFlow 2.x** compatibility.
-- Added advanced interpolation features (Nearest Neighbor, Bilinear, and Bicubic).
-- Integrated **Git LFS** for handling large model weights efficiently.
-
-## Prerequisites & Requirements
-- **Git LFS**: Required to download model weights (`.h5` files). Run `git lfs pull` after cloning.
-- **Python Packages**:
-  - `opencv-python` (4.4.1+)
-  - `tensorflow` (2.9.1+)
-  - `tensorflow-addons`
-  - `numpy`, `matplotlib`, `scipy`, `scikit-learn`
-
-## Citation
-If you use this code in your research, please cite the original paper:
-
-```bibtex
-@InProceedings{Ibrahem_2023_CVPR,
-    author    = {Ibrahem, Hatem and Salem, Ahmed and Kang, Hyun-Soo},
-    title     = {ST-RoomNet: Learning Room Layout Estimation From Single Image Through Unsupervised Spatial Transformations},
-    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshops},
-    month     = {June},
-    year      = {2023},
-    pages     = {3375-3383}
-}
+## Struktur Proyek
+```text
+/simpel
+├── app.py                # Server FastAPI utama
+├── core/
+│   └── model.py          # Arsitektur model ST-RoomNet
+├── weights/
+│   └── persfective.pth   # Bobot model (Weights)
+├── assets/
+│   └── ref_img2.png      # Mask referensi
+├── static/
+│   └── index.html        # Frontend dashboard
+├── tests/
+│   └── test_model.py     # Skrip pengujian bulk
+├── utils/
+│   └── debug_classes.py  # Utilitas bantu
+├── api_outputs/          # Folder hasil prediksi
+└── requirements.txt      # Daftar dependensi
 ```
+
+## Persiapan & Instalasi
+
+### 1. Prasyarat
+- **Python 3.8+**
+- **Git LFS** (untuk mendownload file model berukuran besar)
+
+### 2. Instalasi
+Clone repository dan pindah ke direktori proyek:
+```bash
+git clone <url-repo>
+cd simpel
+```
+
+Buat virtual environment (opsional tapi sangat disarankan):
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+.venv\Scripts\activate     # Windows
+```
+
+Install seluruh dependensi dengan perintah berikut:
+```bash
+pip install -r requirements.txt
+```
+
+## Cara Menjalankan
+
+### Menjalankan Server API
+Jalankan server aplikasi utama menggunakan perintah:
+```bash
+python app.py
+```
+Aplikasi akan berjalan di `http://localhost:8000`. Anda bisa membuka browser di alamat tersebut untuk melihat dashboard demo.
+
+### Menjalankan Pengujian (Visual Check)
+Untuk menjalankan pengujian pada banyak gambar sekaligus di folder `assets/`:
+```bash
+$env:PYTHONPATH = "."; python tests/test_model.py
+```
+Hasil prediksi akan disimpan secara otomatis di folder `api_outputs/`.
+
+## Developer & Maintainer
+- **Owner**: Fahrul Rozi
+- **Status**: Stable / Optimized Version
+
+---
+
+---
+*Optimized with ❤️ by Fahrul Rozi*
