@@ -9,24 +9,26 @@ Proyek ini adalah pengembangan dan optimasi dari **ST-RoomNet** yang dikembangka
 - **FastAPI Backend**: Endpoint yang siap digunakan untuk integrasi sistem.
 - **Clean Architecture**: Struktur pemfolderan yang rapi dan mudah di-maintain.
 
-## Struktur Proyek
+## Struktur Proyek Terbaru (Layered Architecture)
 ```text
 /simpel
-├── app.py                # Server FastAPI utama
-├── core/
-│   └── model.py          # Arsitektur model ST-RoomNet
-├── weights/
-│   └── persfective.pth   # Bobot model (Weights)
-├── assets/
-│   └── ref_img2.png      # Mask referensi
-├── static/
-│   └── index.html        # Frontend dashboard
-├── tests/
-│   └── test_model.py     # Skrip pengujian bulk
-├── utils/
-│   └── debug_classes.py  # Utilitas bantu
-├── api_outputs/          # Folder hasil prediksi
-└── requirements.txt      # Daftar dependensi
+├── app.py                # Server FastAPI utama (Entrypoint HTTP)
+├── core/                 # (Domain) Logika Bisnis & AI Inference utama
+│   ├── config.py         # Seting parameter & direktori
+│   ├── inference.py      # Pengaturan model ST-RoomNet & GPU Prediksi
+│   ├── postprocess.py    # Pembersihan noise mask dengan Numpy OpenCV
+│   └── sam3_client.py    # Adaptor HTTPS untuk Microservice SAM3
+├── utils/                # (Infrastructure) Tools independen & helpers
+│   └── perspective.py    # Alat bantu proses warp & rendering keramik
+├── api-sam3/             # (Microservice) Standalone SAM3 Model AI Pipeline
+│   ├── main.py           # Port: 8001
+│   ├── env/              # Venv Python Isolasi SAM3
+│   └── .env              # Kunci akses HuggingFace
+├── scripts/              # Skrip Batch untuk background Runner/Launchers
+├── static/               # Assets Web App (index.html)
+├── outputs/              # Direktori cache respon akhir
+├── tests/                # Lingkungan QC & Eksperimen laboratorium
+└── run_all.bat           # MAIN LAUNCHER: Menjalankan Main + SAM3
 ```
 
 ## Persiapan & Instalasi
@@ -56,19 +58,23 @@ pip install -r requirements.txt
 
 ## Cara Menjalankan
 
-### Menjalankan Server API
-Jalankan server aplikasi utama menggunakan perintah:
+### Menjalankan Sistem Penuh (Main API + SAM3 Microservice)
+Karena proyek ini mengadopsi standar **Multi-Python Process**, cara paling direkomendasikan adalah menggunakan skrip yang sudah kami susun:
 ```bash
-python app.py
+run_all.bat
 ```
-Aplikasi akan berjalan di `http://localhost:8000`. Anda bisa membuka browser di alamat tersebut untuk melihat dashboard demo.
+*Script ini otomatis merutekan _SAM3_ ke port `8001`, menunggu model hangat selama 45 detik, lalu meluncurkan main app di port `8000`.*
+
+### URL Tersedia:
+- **Dashboard Web**: `http://localhost:8000`
+- **SAM3 Health Check**: `http://localhost:8001/health`
 
 ### Menjalankan Pengujian (Visual Check)
-Untuk menjalankan pengujian pada banyak gambar sekaligus di folder `assets/`:
+Untuk menjalankan pengujian pada skrip independen di dalam folder tests:
 ```bash
 $env:PYTHONPATH = "."; python tests/test_model.py
 ```
-Hasil prediksi akan disimpan secara otomatis di folder `api_outputs/`.
+Hasil akan disimpan sebagai gambar baru pada file terkait.
 
 ## Developer & Maintainer
 - **Owner**: Fahrul Rozi

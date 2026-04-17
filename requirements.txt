@@ -3,5 +3,6 @@ uvicorn==0.33.0
 torch==2.4.1
 torchvision==0.19.1
 opencv-python==4.12.0.88
-numpy==1.24.4
+numpy>=1.26.0,<2.0.0
 python-multipart==0.0.20
+httpx>=0.27.0

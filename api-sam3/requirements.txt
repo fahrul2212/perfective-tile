@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+transformers>=4.48.0
+torch
+torchvision
+Pillow
+requests
+huggingface_hub

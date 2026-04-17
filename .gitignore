@@ -8,7 +8,7 @@ venv/
 .env
 
 # Project specific outputs
-api_outputs/
+outputs/
 input_torch/
 input/
 
@@ -20,3 +20,5 @@ input/
 # IDEs
 .vscode/
 .idea/
+
+tests/transformasi_perspective/algoritma/

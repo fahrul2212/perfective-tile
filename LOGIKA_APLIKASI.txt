@@ -1,0 +1,117 @@
+================================================================
+LOGIKA KESELURUHAN APLIKASI SIMPEL
+================================================================
+
+INTINYA: Pengguna upload foto ruangan → sistem tahu lantainya →
+         pasang keramik perspektif di lantai tersebut → tampilkan.
+
+================================================================
+ALUR KERJA (app.py /predict)
+================================================================
+
+USER UPLOAD FOTO
+      │
+      ▼
+[1] BACA GAMBAR
+    - File diterima FastAPI
+    - Decode jadi numpy array (img_bgr)
+
+      │
+      ▼
+[2] KIRIM KE GPU
+    - Konversi BGR → RGB
+    - Normalisasi 0..1
+    - Pindahkan ke CUDA/CPU
+
+      │
+      ▼
+[3] PREDIKSI LANTAI — core/inference.py + core/model.py
+    - ST_RoomNet (Neural Network) membaca gambar
+    - Output: mask lantai berupa gambar hitam-putih
+    - Proses: ~ms (GPU warm sudah dilakukan saat startup)
+
+      │
+      ▼
+[4] BERSIHKAN MASK — core/postprocess.py
+    - get_largest_cc()   → ambil area terbesar saja (buang noise kecil)
+    - fill_floor_bottom() → isi lubang di bagian bawah mask
+
+      │
+      ▼
+[5] VISUALISASI KERAMIK — utils/perspective.py
+    - Deteksi 4 titik sudut lantai dari mask
+    - Bangun Homography (matrix perspektif)
+    - Warp texture keramik ke bentuk trapezoid perspektif
+    - Gambar grout lines
+    → Output: foto asli + keramik terpasang
+
+      │
+      ├──────────────────────────────────────────┐
+      ▼                                          ▼
+[6] SIMPAN HASIL UTAMA                    [7] MINTA MASK SAM3
+    - mask.jpg    (mask lantai)                core/sam3_client.py
+    - overlay.jpg (foto + mask semi-             │
+      transparan)                               ▼
+    - ceramic.jpg (foto + keramik)        HTTP POST ke api-sam3/:8001
+                                          (service Python terpisah,
+                                           port 8001)
+                                               │
+                                               ▼
+                                          Terima mask SAM3
+                                          (boundary lantai akurat)
+                                               │
+                                               ▼
+                                          Simpan sam3_mask.png
+
+      │
+      ▼
+[8] RETURN JSON ke Frontend (index.html)
+    {
+      mask_url    : "/outputs/..."
+      overlay_url : "/outputs/..."
+      ceramic_url : "/outputs/..."
+      sam3_mask_url: "/outputs/..."
+    }
+
+================================================================
+PERAN MASING-MASING FILE
+================================================================
+
+app.py              → Router/Controller, mengorkestrasi semua langkah
+core/model.py       → Arsitektur Neural Network ST_RoomNet
+core/inference.py   → Load model, warm-up GPU, jalankan prediksi
+core/postprocess.py → Membersihkan mask (filter noise, fill holes)
+core/config.py      → Semua path, port, parameter (satu tempat)
+core/sam3_client.py → HTTP client ke microservice SAM3 (port 8001)
+utils/perspective.py→ Render keramik perspektif di foto
+api-sam3/main.py    → Server SAM3 terpisah (port 8001), hasilkan
+                       mask lantai yang organik & akurat
+static/index.html   → Frontend UI pengguna
+outputs/            → Folder hasil gambar yang diserve ke frontend
+
+================================================================
+DUA MODEL, DUA PERAN BERBEDA
+================================================================
+
+  ST_RoomNet (lokal, port 8000)
+  └─ Kuat di: geometri perspektif yang benar (trapezoid bersih)
+  └─ Lemah di: batas lantai kurang akurat (terpotong/kecil)
+  └─ Dipakai untuk: deteksi 4 titik sudut perspektif
+
+  SAM3 (microservice, port 8001)
+  └─ Kuat di: batas lantai sangat akurat (organik, mengikuti bentuk asli)
+  └─ Lemah di: tidak tahu info perspektif
+  └─ Dipakai untuk: boundary/clipping area lantai yang benar
+
+  KOMBINASI → perspektif benar (ST_RoomNet) + bentuk benar (SAM3)
+
+================================================================
+STARTUP SERVER
+================================================================
+
+  run_all.bat       → Jalankan dua server sekaligus:
+                       1. api-sam3 (port 8001)
+                       2. app.py   (port 8000)
+  kill_all_services.bat → Matikan semua proses
+
+================================================================

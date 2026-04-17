@@ -3,17 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RoomVision AI | Layout Estimation</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>RoomVision AI | Virtual Try-On</title>
+    <meta name="description" content="AI-powered Virtual Try-On for ceramic tiles. Upload room photos and visualize tiles with realistic perspective rendering.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #6366f1;
             --primary-hover: #4f46e5;
+            --accent: #f472b6;
             --bg: #0f172a;
+            --bg-secondary: #1e293b;
             --card-bg: rgba(30, 41, 59, 0.7);
             --border: rgba(255, 255, 255, 0.1);
+            --border-active: rgba(99, 102, 241, 0.5);
             --text: #f8fafc;
             --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
         }
 
         * {
@@ -27,7 +34,8 @@
             background-color: var(--bg);
             background-image: 
                 radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.1) 0px, transparent 50%);
+                radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.1) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
             color: var(--text);
             min-height: 100vh;
             display: flex;
@@ -37,35 +45,44 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1100px;
             width: 100%;
         }
 
         header {
             text-align: center;
-            margin-bottom: 3rem;
+            margin-bottom: 2.5rem;
         }
 
         h1 {
-            font-size: 3rem;
-            font-weight: 600;
-            background: linear-gradient(to right, #818cf8, #f472b6);
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #818cf8, #f472b6, #34d399);
+            background-size: 200% 200%;
+            animation: gradientShift 6s ease infinite;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
 
         p.subtitle {
             color: var(--text-muted);
-            font-size: 1.1rem;
+            font-size: 1.05rem;
+            font-weight: 300;
         }
 
+        /* ── Upload Card ──────────────────────────── */
         .upload-card {
             background: var(--card-bg);
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(16px);
             border: 1px solid var(--border);
             border-radius: 24px;
-            padding: 3rem;
+            padding: 2.5rem;
             text-align: center;
             transition: all 0.3s ease;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
@@ -73,14 +90,14 @@
         }
 
         .upload-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-4px);
+            border-color: var(--border-active);
+            transform: translateY(-2px);
         }
 
         .drop-zone {
             border: 2px dashed var(--border);
             border-radius: 16px;
-            padding: 3rem;
+            padding: 2.5rem;
             cursor: pointer;
             transition: all 0.2s ease;
         }
@@ -91,101 +108,204 @@
         }
 
         .drop-zone svg {
-            width: 48px;
-            height: 48px;
+            width: 44px;
+            height: 44px;
             color: var(--primary);
-            margin-bottom: 1rem;
+            margin-bottom: 0.8rem;
         }
 
-        input[type="file"] {
-            display: none;
+        .drop-zone .drop-text {
+            color: var(--text-muted);
+            font-size: 0.95rem;
         }
+
+        input[type="file"] { display: none; }
 
         .btn {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), #7c3aed);
             color: white;
-            padding: 0.8rem 2rem;
-            border-radius: 12px;
+            padding: 0.75rem 2rem;
+            border-radius: 14px;
             border: none;
             font-weight: 600;
+            font-size: 0.95rem;
             cursor: pointer;
-            transition: all 0.2s ease;
-            margin-top: 1.5rem;
+            transition: all 0.3s ease;
+            margin-top: 1.2rem;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
         }
 
         .btn:hover {
-            background: var(--primary-hover);
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
         }
 
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            transform: none;
         }
 
+        /* ── Stats ──────────────────────────── */
+        .stats {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .stat-badge {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.4rem 1rem;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .stat-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        /* ── Results ──────────────────────────── */
         #results {
             display: none;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
             margin-top: 2rem;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Hero — VTO Full Width */
+        .result-hero {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--accent), var(--success));
+            border-radius: 20px 20px 0 0;
+        }
+
+        .result-hero .hero-label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.8rem;
+            padding-top: 0.3rem;
+        }
+
+        .result-hero .hero-label h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .result-hero .hero-label .badge {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            font-size: 0.65rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 99px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .result-hero img {
+            width: 100%;
+            border-radius: 14px;
+            display: block;
+        }
+
+        /* Grid — Layered Results */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.2rem;
         }
 
         .result-item {
             background: var(--card-bg);
+            backdrop-filter: blur(12px);
             border: 1px solid var(--border);
-            border-radius: 20px;
+            border-radius: 16px;
             padding: 1rem;
             overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .result-item:hover {
+            border-color: var(--border-active);
+            transform: translateY(-2px);
         }
 
         .result-item h3 {
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
+            margin-bottom: 0.6rem;
+            font-size: 0.78rem;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.06em;
             color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .result-item .layer-desc {
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
         }
 
         .result-item img {
             width: 100%;
-            border-radius: 12px;
+            border-radius: 10px;
             display: block;
         }
 
-        .stats {
-            margin-top: 2rem;
-            display: flex;
-            gap: 2rem;
-            justify-content: center;
-        }
-
-        .stat-badge {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 0.5rem 1rem;
-            border-radius: 99px;
-            font-size: 0.85rem;
-            border: 1px solid var(--border);
-        }
-
+        /* ── Loader ──────────────────────────── */
         .loader {
             display: none;
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             border: 3px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             border-top-color: white;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
+        /* ── Responsive ──────────────────────────── */
         @media (max-width: 768px) {
-            #results { grid-template-columns: 1fr; }
+            .results-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 2rem; }
+            .upload-card { padding: 1.5rem; }
         }
     </style>
 </head>
@@ -193,7 +313,7 @@
     <div class="container">
         <header>
             <h1>RoomVision AI</h1>
-            <p class="subtitle">Next-generation Perspective & Layout Estimation</p>
+            <p class="subtitle">Virtual Try-On — Ceramic Tile Visualization</p>
         </header>
 
         <div class="upload-card">
@@ -201,29 +321,64 @@
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                <div id="dropText">Drag and drop your room photo here, or click to browse</div>
+                <div class="drop-text" id="dropText">Drag and drop your room photo, or click to browse</div>
             </div>
             <input type="file" id="fileInput" accept="image/*">
-            
+
             <button class="btn" id="uploadBtn">
                 <div class="loader" id="loader"></div>
-                <span id="btnText">Analyze Layout</span>
+                <span id="btnText">✨ Analyze & Render</span>
             </button>
 
             <div class="stats" id="statsArea" style="display: none;">
-                <div class="stat-badge" id="timeBadge">Latency: --</div>
-                <div class="stat-badge" id="resBadge">Resolution: --</div>
+                <div class="stat-badge">
+                    <span class="dot"></span>
+                    <span id="timeBadge">Latency: --</span>
+                </div>
+                <div class="stat-badge">
+                    <span class="dot" style="background: var(--primary);"></span>
+                    <span id="resBadge">Resolution: --</span>
+                </div>
             </div>
         </div>
 
+        <!-- ══ RESULTS ═══════════════════════════════ -->
         <div id="results">
-            <div class="result-item">
-                <h3>Layout Mask</h3>
-                <img id="maskImg" src="" alt="Mask">
+
+            <!-- Hero: VTO Result (Full Width) -->
+            <div class="result-hero" id="vtoContainer" style="display: none;">
+                <div class="hero-label">
+                    <h3>🏠 Virtual Try-On Result</h3>
+                    <span class="badge">AI Rendered</span>
+                </div>
+                <img id="vtoImg" src="" alt="VTO Result">
             </div>
-            <div class="result-item">
-                <h3>Perspective Overlay</h3>
-                <img id="overlayImg" src="" alt="Overlay">
+
+            <!-- Grid: Layered outputs -->
+            <div class="results-grid">
+                <div class="result-item" id="overlayContainer" style="display: none;">
+                    <h3>📐 Perspective Overlay</h3>
+                    <p class="layer-desc">ST_RoomNet mask overlay on original photo</p>
+                    <img id="overlayImg" src="" alt="Overlay">
+                </div>
+
+                <div class="result-item" id="maskContainer" style="display: none;">
+                    <h3>🎭 Refined Mask</h3>
+                    <p class="layer-desc">Smoothed floor mask (Median + Gaussian)</p>
+                    <img id="maskImg" src="" alt="Mask">
+                </div>
+
+                <div class="result-item" id="sam3Container" style="display: none;">
+                    <h3>🧠 SAM3 Floor Mask</h3>
+                    <p class="layer-desc">Segment Anything Model 3 — text-guided segmentation</p>
+                    <img id="sam3Img" src="" alt="SAM3 Mask">
+                </div>
+
+                <div class="result-item" id="shadowContainer" style="display: none;">
+                    <h3>🌑 Shadow Map</h3>
+                    <p class="layer-desc">Extracted floor shadow for realistic compositing</p>
+                    <img id="shadowImg" src="" alt="Shadow Map">
+                </div>
             </div>
         </div>
     </div>
@@ -235,12 +390,25 @@
         const loader = document.getElementById('loader');
         const btnText = document.getElementById('btnText');
         const results = document.getElementById('results');
-        const maskImg = document.getElementById('maskImg');
-        const overlayImg = document.getElementById('overlayImg');
         const statsArea = document.getElementById('statsArea');
         const timeBadge = document.getElementById('timeBadge');
         const resBadge = document.getElementById('resBadge');
 
+        // Image elements
+        const vtoImg = document.getElementById('vtoImg');
+        const overlayImg = document.getElementById('overlayImg');
+        const maskImg = document.getElementById('maskImg');
+        const sam3Img = document.getElementById('sam3Img');
+        const shadowImg = document.getElementById('shadowImg');
+
+        // Container elements
+        const vtoContainer = document.getElementById('vtoContainer');
+        const overlayContainer = document.getElementById('overlayContainer');
+        const maskContainer = document.getElementById('maskContainer');
+        const sam3Container = document.getElementById('sam3Container');
+        const shadowContainer = document.getElementById('shadowContainer');
+
+        // ── Event Listeners ──────────────────
         dropZone.addEventListener('click', () => fileInput.click());
 
         dropZone.addEventListener('dragover', (e) => {
@@ -265,17 +433,18 @@
 
         function handleFileSelect() {
             if (fileInput.files.length) {
-                document.getElementById('dropText').innerText = fileInput.files[0].name;
+                document.getElementById('dropText').innerText = '📎 ' + fileInput.files[0].name;
             }
         }
 
+        // ── Upload & Predict ──────────────────
         uploadBtn.addEventListener('click', async () => {
             if (!fileInput.files.length) return;
 
-            // UI State
+            // UI State: loading
             uploadBtn.disabled = true;
             loader.style.display = 'block';
-            btnText.innerText = 'Analyzing...';
+            btnText.innerText = 'Processing...';
             results.style.display = 'none';
 
             const formData = new FormData();
@@ -286,25 +455,66 @@
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.status === 'success') {
-                    maskImg.src = data.mask_url + '?t=' + Date.now();
-                    overlayImg.src = data.overlay_url + '?t=' + Date.now();
-                    results.style.display = 'grid';
+                    const t = Date.now();
+
+                    // ── Hero: VTO Result ──
+                    if (data.vto_url) {
+                        vtoImg.src = data.vto_url + '?t=' + t;
+                        vtoContainer.style.display = 'block';
+                    } else {
+                        vtoContainer.style.display = 'none';
+                    }
+
+                    // ── Layer: Overlay ──
+                    if (data.overlay_url) {
+                        overlayImg.src = data.overlay_url + '?t=' + t;
+                        overlayContainer.style.display = 'block';
+                    } else {
+                        overlayContainer.style.display = 'none';
+                    }
+
+                    // ── Layer: Refined Mask ──
+                    if (data.mask_url) {
+                        maskImg.src = data.mask_url + '?t=' + t;
+                        maskContainer.style.display = 'block';
+                    } else {
+                        maskContainer.style.display = 'none';
+                    }
+
+                    // ── Layer: SAM3 Mask ──
+                    if (data.sam3_mask_url) {
+                        sam3Img.src = data.sam3_mask_url + '?t=' + t;
+                        sam3Container.style.display = 'block';
+                    } else {
+                        sam3Container.style.display = 'none';
+                    }
+
+                    // ── Layer: Shadow Map ──
+                    if (data.shadow_url) {
+                        shadowImg.src = data.shadow_url + '?t=' + t;
+                        shadowContainer.style.display = 'block';
+                    } else {
+                        shadowContainer.style.display = 'none';
+                    }
+
+                    // Show results & stats
+                    results.style.display = 'block';
                     statsArea.style.display = 'flex';
                     timeBadge.innerText = `Latency: ${data.inference_time_ms}ms`;
                     resBadge.innerText = `Resolution: ${data.resolution}`;
                 } else {
-                    alert('Error: ' + data.detail);
+                    alert('Error: ' + (data.detail || 'Unknown error'));
                 }
             } catch (err) {
                 alert('Connection error: ' + err.message);
             } finally {
                 uploadBtn.disabled = false;
                 loader.style.display = 'none';
-                btnText.innerText = 'Analyze Layout';
+                btnText.innerText = '✨ Analyze & Render';
             }
         });
     </script>
