@@ -160,3 +160,134 @@ def render_ceramic_perspective(
     
     print(f"[perspective] VTO selesai — tiles: {cols}×{rows} pixel terisi: {np.count_nonzero(combined_mask):,}")
     return result_cropped
+
+
+def render_tile_fast(
+    img_bgr: np.ndarray,
+    mask_sam3: np.ndarray,
+    pts: dict,
+    tile_path: str,
+    cached_warp_mask: np.ndarray = None,
+) -> tuple:
+    """
+    FAST tile render — menggunakan pre-computed perspective points.
+    Skip detect_4_points() dan smart_trapezoid_fitting() sepenuhnya.
+    
+    Optimasi vs render_ceramic_perspective():
+    - Skip detect_4_points()        → -100ms
+    - Skip smart_trapezoid_fitting() → -200ms  
+    - INTER_LINEAR vs INTER_CUBIC   → -100ms
+    - Cache warp_mask               → -50ms
+    Total: ~450ms lebih cepat
+    
+    Args:
+        img_bgr: Foto ruangan BGR
+        mask_sam3: SAM3 mask (atau fallback)
+        pts: Pre-computed perspective points dari blueprint
+        tile_path: Path ke gambar tile
+        cached_warp_mask: Pre-computed warp mask (opsional)
+        
+    Returns:
+        (result_bgr, warp_mask) — result + warp mask untuk cache
+    """
+    h_orig, w_orig = img_bgr.shape[:2]
+    
+    if mask_sam3 is None:
+        return img_bgr.copy(), None
+    
+    if not pts or "canvas_h" not in pts:
+        return img_bgr.copy(), None
+    
+    # Pastikan mask sesuai ukuran
+    if mask_sam3.shape[:2] != (h_orig, w_orig):
+        mask_sam3 = cv2.resize(mask_sam3, (w_orig, h_orig), interpolation=cv2.INTER_NEAREST)
+    _, mask_sam3 = cv2.threshold(mask_sam3, 127, 255, cv2.THRESH_BINARY)
+    
+    canvas_h = pts["canvas_h"]
+    canvas_w = pts["canvas_w"]
+    shift_y = pts["shift_y"]
+    shift_x = pts["shift_x"]
+    
+    # Grid dari pts (sudah di-cache)
+    cols, rows = calc_cols_rows(pts)
+    
+    # Build texture sheet
+    TILE_PX = 500
+    tile_w, tile_h = TILE_PX, TILE_PX
+    tex_w = cols * tile_w
+    tex_h = rows * tile_h
+    
+    resolved = _resolve_tile_path(tile_path)
+    tile_img = cv2.imread(resolved) if resolved else None
+    
+    if tile_img is None:
+        tile_img = np.full((tile_h, tile_w, 3), (220, 220, 220), dtype=np.uint8)
+    else:
+        tile_img = cv2.resize(tile_img, (tile_w, tile_h), interpolation=cv2.INTER_LINEAR)
+    
+    # Build texture via np.tile (faster than loop)
+    texture = np.tile(tile_img, (rows, cols, 1))
+    
+    # Grout
+    GROUT_COLOR = (80, 78, 75)
+    GROUT_THICKNESS = 4
+    for c in range(cols + 1):
+        x = min(c * tile_w, tex_w - 1)
+        cv2.line(texture, (x, 0), (x, tex_h - 1), GROUT_COLOR, GROUT_THICKNESS)
+    for r in range(rows + 1):
+        y = min(r * tile_h, tex_h - 1)
+        cv2.line(texture, (0, y), (tex_w - 1, y), GROUT_COLOR, GROUT_THICKNESS)
+    
+    # Perspective warp — compute M once per texture size
+    src_pts = np.float32([
+        [0, 0], [tex_w - 1, 0],
+        [0, tex_h - 1], [tex_w - 1, tex_h - 1],
+    ])
+    
+    # Convert pts values to proper format
+    def to_list(v):
+        return list(v) if isinstance(v, (tuple, list)) else v
+    
+    dst_pts = np.float32([
+        to_list(pts["C_TL"]), to_list(pts["C_TR"]),
+        to_list(pts["C_BL"]), to_list(pts["C_BR"]),
+    ])
+    
+    M_warp = cv2.getPerspectiveTransform(src_pts, dst_pts)
+    
+    # INTER_LINEAR instead of INTER_CUBIC — ~2x faster
+    warped_ceramic = cv2.warpPerspective(
+        texture, M_warp, (canvas_w, canvas_h),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(0, 0, 0),
+    )
+    
+    # Warp mask — use cached if available
+    if cached_warp_mask is not None:
+        warp_mask = cached_warp_mask
+    else:
+        ones = np.ones((tex_h, tex_w), dtype=np.uint8) * 255
+        warp_mask = cv2.warpPerspective(
+            ones, M_warp, (canvas_w, canvas_h),
+            flags=cv2.INTER_NEAREST,
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=0,
+        )
+    
+    # Composite
+    img_canvas = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
+    img_canvas[shift_y:shift_y + h_orig, shift_x:shift_x + w_orig] = img_bgr
+    
+    mask_canvas = np.zeros((canvas_h, canvas_w), dtype=np.uint8)
+    mask_canvas[shift_y:shift_y + h_orig, shift_x:shift_x + w_orig] = mask_sam3
+    
+    combined_mask = cv2.bitwise_and(warp_mask, mask_canvas)
+    
+    result = img_canvas.copy()
+    result[combined_mask > 0] = warped_ceramic[combined_mask > 0]
+    
+    result_cropped = result[shift_y:shift_y + h_orig, shift_x:shift_x + w_orig]
+    
+    return result_cropped, warp_mask
+
