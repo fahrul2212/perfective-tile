@@ -1,47 +1,104 @@
 # 🏛️ Panduan Arsitektur & Struktur Folder Proyek
 
-Proyek ini telah mengadopsi standar **Layered Architecture (N-Tier Architecture)** yang digabungkan dengan **Microservice Pattern**. Bertujuan untuk membuat pemeliharaan kode (maintenance), pengujian (testing), dan pembagian kerja menjadi lebih jelas dan profesional.
+Proyek ini mengadopsi **Clean Layered Architecture** (Robert C. Martin, 2017) digabung dengan **Microservice Pattern** dan **Hexagonal Architecture** (Alistair Cockburn). Setiap layer memiliki tanggung jawab tunggal (Single Responsibility Principle).
 
 ---
 
-## 1. Penjelasan Masing-Masing Folder
+## 1. Diagram Arsitektur
 
-Berikut adalah fungsi dan peran masing-masing folder dalam arsitektur ini:
-
-### `core/` (Domain Layer / Logika Inti)
-Merupakan *"otak"* dari keseluruhan proyek. Tidak peduli Anda mengubah sistemnya menjadi API, Desktop App, atau Command Line, folder ini tetap utuh karena tidak bergantung pada hal eksternal (seperti Web HTTP).
-- `config.py` : Tempat sentral mengatur semua konfigurasi (Path, Port, URL, Parameter Model).
-- `model.py` : Arsitektur Neural Network `ST_RoomNet`.
-- `inference.py` : *Service Layer* yang mengatur proses inisiasi GPU dan prediksi gambar.
-- `postprocess.py` : Logika matematika murni (NumPy/OpenCV) tanpa kaitan dengan internet, seperti membersihkan noise mask.
-- `sam3_client.py` : *Adapter Layer* untuk berkomunikasi via HTTP ke service SAM3 secara aman (di mana main app seakan tidak peduli SAM3 itu ada dimana).
-
-### `utils/` (Infrastructure Layer / Utilitas)
-Singkatan dari *Utilities*. Ini adalah **kotak perkakas (toolbox)**. Isinya adalah fungsi-fungsi pembantu yang berdiri sendiri, tidak peduli terhadap *"Bisnis Utama"*, tapi sangat membantu pengerjaan hal repetitif.
-- `perspective.py` : Alat untuk menggambar garis, efek keramik, efek distorsi (*drawing tool*). Jika kelak Anda tidak membuat aplikasi keramik lagi tapi butuh fungsi *warp* sudut, file ini masih bisa di-_copy-paste_ langsung tanpa membawa aplikasi `core`. 
-
-### `api-sam3/` (Microservice)
-Karena model AI `SAM3` memiliki kebutuhan teknologi yang "berbenturan" (butuh library transformator super baru yang bisa merusak versi `Torch` stabil Anda), ia **diisolasi** ke sini. Folder ini seperti pulau mandiri yang punya Virtual Environment (`env/`) dan server HTTP tersendiri (Port 8001).
-
-### `scripts/` (Operasional DevOps)
-Menyimpan semua file kotor `.bat` yang menjalankan sistem di *background* seperti *background runner* atau *kill port*. Dipisahkan ke sini agar level awal (*root*) file explorer tetap enak dilihat.
-
-### `tests/` (Pengujian / QC)
-Lingkungan Lab untuk bereksperimen. Segala skrip untuk mengecek apakah `core/model.py` bisa memotong 1000 gambar sekaligus tanpa menyalakan server UI, adanya di sini (termasuk folder `laboratory`).
-
-### `outputs/`
-Berisi hasil rendering sistem untuk disaksikan oleh Frontend (API output static).
+```
+              ┌─────────────────────┐
+              │    static/          │ ← Frontend (HTML/CSS/JS)
+              │    index.html       │
+              └────────┬────────────┘
+                       │ HTTP
+              ┌────────▼────────────┐
+              │    app.py           │ ← Application Layer (Thin Router)
+              │    (FastAPI)        │    Hanya routing + file I/O
+              └────────┬────────────┘
+                       │
+              ┌────────▼────────────┐
+              │    services/        │ ← Orchestration Layer
+              │    ├ vto_pipeline   │    Mengatur alur pipeline
+              │    └ sam3_client    │    Adapter HTTP (SAM3)
+              └───┬────────────┬───┘
+                  │            │
+         ┌────────▼──┐  ┌─────▼──────────┐
+         │  core/    │  │  utils/         │
+         │  Domain   │  │  Infrastructure │
+         │  Layer    │  │  Tools          │
+         └──────────┘  └────────────────┘
+```
 
 ---
 
-## 2. Alur Cara Kerja (Flow)
+## 2. Penjelasan Masing-Masing Folder
 
-Saat gambar masuk, ini yang terjadi berurutan:
-1. **Request via Frontend (`index.html`)** masuk ke `app.py`.
-2. **`app.py`** hanya berkata: *"Tolong teruskan ini ke `core/inference.py`"*.
-3. **`inference.py`** melakukan sihir GPU-nya dan mengirim hasil ke **`core/postprocess.py`** untuk dibersihkan.
-4. **`app.py`** (secara bersamaan) menyuruh **`core/sam3_client.py`** menelepon `api-sam3/:8001` untuk minta tolong ke SAM3.
-5. Setelah jadi mask bersih, **`app.py`** minta tolong alat gambar di **`utils/perspective.py`** untuk melukis keramiknya.
-6. Gambar disimpan ke folder **`outputs/`** dan Web merespon kembali!
+### `app.py` (Application Layer — Thin Router)
+**Prinsip**: Semakin tipis, semakin baik. `app.py` HANYA bertugas:
+- Menerima HTTP request
+- Memanggil `services/vto_pipeline.py`
+- Menyimpan file output
+- Mengembalikan JSON response
 
-Itulah kenapa disebut *Clean Layered Architecture*. Setiap halangan jika error, Anda tahu mana folder yang bermasalah secara instan!
+### `services/` (Orchestration Layer) 🆕
+Merupakan *"Konduktor Orkestra"*. Mengatur urutan pemanggilan komponen tanpa menulis logika bisnis sendiri.
+- `vto_pipeline.py` : Pipeline VTO end-to-end (RoomNet → Postprocess → SAM3 → VTO Render → Shadow)
+- `sam3_client.py` : *Adapter Layer* untuk HTTP ke SAM3 microservice. Dipindahkan dari `core/` karena ini adapter (ring luar), bukan domain.
+
+### `core/` (Domain Layer — Otak)
+Merupakan *"Otak"* murni. Tidak bergantung pada HTTP, database, atau framework apapun.
+- `config.py` : Konfigurasi sentral
+- `model.py` : Arsitektur Neural Network `ST_RoomNet`
+- `inference.py` : Service GPU inference
+- `postprocess/` : 🆕 **Package** (dipecah dari 1 file menjadi 3 modul):
+  - `mask_cleanup.py` : `get_largest_cc()`, `fill_floor_bottom()` — pembersihan dasar
+  - `mask_refinement.py` : `refine_mask_smooth()`, `generate_alpha_mask()` — smoothing & matting
+  - `shadow.py` : `extract_shadow_map()` — ekstraksi bayangan
+- `sam3_client.py` : *Backward compat proxy* → re-export dari `services/sam3_client.py`
+
+### `utils/` (Infrastructure Layer — Toolbox)
+Fungsi-fungsi stateless yang bisa di-reuse tanpa membawa logika bisnis.
+- `perspective/` : 🆕 **Package** (dipecah dari 1 file menjadi 4 modul):
+  - `detect_points.py` : `detect_4_points()` — geometri deteksi titik perspektif
+  - `trapezoid_fitting.py` : `smart_trapezoid_fitting()` — adaptive fitting ke SAM3 mask
+  - `grid.py` : `calc_cols_rows()` — kalkulasi grid tile dinamis
+  - `renderer.py` : `render_ceramic_perspective()` — compositing tile + perspective warp
+
+### `api-sam3/` (Microservice — Pulau Terisolasi)
+Model AI SAM3 diisolasi karena dependency yang berbenturan. Punya virtual environment dan server HTTP sendiri (Port 8001).
+
+### `tests/` (Lab Riset & Eksperimen)
+Tempat R&D. Script-script riset segmentasi, shadow extraction, VTO prototype.
+
+### `static/`, `outputs/`, `assets/`, `scripts/`, `weights/`
+Frontend UI, hasil rendering, input assets, DevOps scripts, model weights.
+
+---
+
+## 3. Alur Cara Kerja (Flow)
+
+```
+1. User upload gambar → app.py
+2. app.py → services/vto_pipeline.process()
+3. Pipeline:
+   a. core/inference.py → GPU inference → raw mask
+   b. core/postprocess/mask_cleanup.py → bersihkan noise
+   c. core/postprocess/mask_refinement.py → haluskan tepian
+   d. services/sam3_client.py → HTTP ke api-sam3/:8001
+   e. utils/perspective/renderer.py → render tile VTO
+   f. core/postprocess/shadow.py → ekstraksi bayangan
+4. app.py → simpan ke outputs/ → return JSON
+5. Frontend render hasil di browser
+```
+
+---
+
+## 4. Prinsip Arsitektur
+
+| Prinsip | Implementasi |
+|---------|-------------|
+| **Single Responsibility** | Setiap file punya 1 alasan untuk berubah |
+| **Dependency Rule** | `app.py` → `services/` → `core/` + `utils/` (bukan sebaliknya) |
+| **Backward Compatibility** | `from core.postprocess import X` tetap bekerja via `__init__.py` |
+| **Adapter Pattern** | SAM3 client adalah adapter — `core/` tidak tahu tentang HTTP |
